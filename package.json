@@ -1,0 +1,16 @@
+{
+  "name": "railway-modelling-events",
+  "version": "1.0.0",
+  "description": "Static website for railway modelling events",
+  "type": "module",
+  "scripts": {
+    "build": "tsx src/build.ts",
+    "dev": "tsx src/build.ts && npx serve dist",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
