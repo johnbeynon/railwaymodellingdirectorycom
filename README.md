@@ -60,15 +60,36 @@ npm run clean
 ├── dist/              # Generated static files (created on build)
 ├── package.json
 ├── tsconfig.json
+├── render.yaml        # Render deployment configuration
 └── README.md
 ```
 
 ## Deployment
 
+### Render (Recommended)
+
+This project includes a `render.yaml` configuration file for easy deployment:
+
+1. Push your code to GitHub
+2. Go to [Render Dashboard](https://dashboard.render.com/)
+3. Click "New" → "Blueprint"
+4. Connect your GitHub repository
+5. Render will automatically detect the `render.yaml` and deploy your site
+
+The site will automatically rebuild whenever you push changes to your repository.
+
+**Features included in the Render config:**
+- Automatic builds on push
+- Pull request previews
+- 1-hour cache control headers
+- Auto-install dependencies
+
+### Other Platforms
+
 The generated `dist/index.html` file can be deployed to any static hosting service:
 
 - **GitHub Pages**: Push the `dist` folder contents
-- **Netlify**: Connect your repo and set build command to `npm run build`
+- **Netlify**: Connect your repo and set build command to `npm run build` and publish directory to `dist`
 - **Vercel**: Similar to Netlify
 - **Any web server**: Just upload the `dist/index.html` file
 
