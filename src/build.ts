@@ -29,8 +29,8 @@ async function fetchEvents(): Promise<Event[]> {
 }
 
 function formatDate(event: Event): string {
-  const startDate = event.start_date || event.date;
-  const endDate = event.end_date;
+  const startDate = event.startDate || event.start_date || event.date;
+  const endDate = event.endDate || event.end_date;
 
   if (!startDate) return 'Date TBA';
 
