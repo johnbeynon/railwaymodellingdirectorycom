@@ -10,6 +10,7 @@ export interface Event {
   description?: string;
   url?: string;
   organiser?: string;
+  county?: string;
   [key: string]: unknown;
 }
 

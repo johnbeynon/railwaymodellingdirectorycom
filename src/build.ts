@@ -53,14 +53,37 @@ function formatDate(event: Event): string {
   return startDate;
 }
 
-function generateHTML(events: Event[]): string {
+function extractCounties(events: Event[]): Map<string, number> {
+  const countyMap = new Map<string, number>();
+
+  events.forEach(event => {
+    const county = event.county || 'Not Specified';
+    countyMap.set(county, (countyMap.get(county) || 0) + 1);
+  });
+
+  // Sort counties alphabetically, but put "Not Specified" at the end
+  const sortedEntries = Array.from(countyMap.entries()).sort((a, b) => {
+    if (a[0] === 'Not Specified') return 1;
+    if (b[0] === 'Not Specified') return -1;
+    return a[0].localeCompare(b[0]);
+  });
+
+  return new Map(sortedEntries);
+}
+
+function generateHTML(events: Event[], countyMap: Map<string, number>): string {
   const eventsHTML = events
-    .map(event => `
-      <div class="event-card">
+    .map(event => {
+      const county = event.county || 'Not Specified';
+      return `
+      <div class="event-card" data-county="${escapeHtml(county)}">
         <h2 class="event-name">${escapeHtml(event.name)}</h2>
         <div class="event-details">
           <div class="event-date">
             <strong>📅 Date:</strong> ${formatDate(event)}
+          </div>
+          <div class="event-county">
+            <strong>🏛️ County:</strong> ${escapeHtml(county)}
           </div>
           ${event.venue ? `
           <div class="event-venue">
@@ -91,7 +114,8 @@ function generateHTML(events: Event[]): string {
         </div>
         ` : ''}
       </div>
-    `)
+    `;
+    })
     .join('\n');
 
   return `<!DOCTYPE html>
@@ -228,6 +252,76 @@ function generateHTML(events: Event[]): string {
       font-size: 0.9rem;
     }
 
+    /* Filter Section Styles */
+    .filter-section {
+      background: white;
+      border-radius: 10px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .filter-title {
+      font-size: 1.3rem;
+      color: #667eea;
+      margin-bottom: 15px;
+    }
+
+    .filter-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .filter-btn {
+      background: #f5f5f5;
+      border: 2px solid #e0e0e0;
+      border-radius: 25px;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .filter-btn:hover {
+      background: #e8e8e8;
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    .filter-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: #667eea;
+      color: white;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+
+    .active-filter-display {
+      color: #666;
+      font-size: 0.95rem;
+      padding-top: 10px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .active-filter-display strong {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .event-card.hidden {
+      display: none;
+    }
+
+    .event-county {
+      margin-bottom: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
     @media (max-width: 768px) {
       .events-grid {
         grid-template-columns: 1fr;
@@ -240,6 +334,19 @@ function generateHTML(events: Event[]): string {
       header {
         padding: 30px 20px;
       }
+
+      .filter-section {
+        padding: 20px 15px;
+      }
+
+      .filter-buttons {
+        gap: 8px;
+      }
+
+      .filter-btn {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+      }
     }
   </style>
 </head>
@@ -250,6 +357,25 @@ function generateHTML(events: Event[]): string {
       <p class="subtitle">Discover upcoming railway modelling events across the UK</p>
       <div class="events-count">${events.length} Events Listed</div>
     </header>
+
+    <div class="filter-section">
+      <h3 class="filter-title">Filter by County</h3>
+      <div class="filter-buttons">
+        <button class="filter-btn active" data-county="all">
+          All Counties (${events.length})
+        </button>
+        ${Array.from(countyMap.entries())
+          .map(([county, count]) => `
+        <button class="filter-btn" data-county="${escapeHtml(county)}">
+          ${escapeHtml(county)} (${count})
+        </button>
+          `)
+          .join('')}
+      </div>
+      <div class="active-filter-display">
+        Showing <strong id="visible-count">${events.length}</strong> of ${events.length} events
+      </div>
+    </div>
 
     <main>
       <div class="events-grid">
@@ -268,6 +394,56 @@ function generateHTML(events: Event[]): string {
       </p>
     </footer>
   </div>
+
+  <script>
+    // County filtering functionality
+    (function() {
+      const filterButtons = document.querySelectorAll('.filter-btn');
+      const eventCards = document.querySelectorAll('.event-card');
+      const visibleCountEl = document.getElementById('visible-count');
+
+      function filterEvents(selectedCounty) {
+        let visibleCount = 0;
+
+        eventCards.forEach(card => {
+          const cardCounty = card.getAttribute('data-county');
+
+          if (selectedCounty === 'all' || cardCounty === selectedCounty) {
+            card.classList.remove('hidden');
+            visibleCount++;
+          } else {
+            card.classList.add('hidden');
+          }
+        });
+
+        // Update visible count
+        if (visibleCountEl) {
+          visibleCountEl.textContent = visibleCount;
+        }
+
+        // Update active button state
+        filterButtons.forEach(btn => {
+          const btnCounty = btn.getAttribute('data-county');
+          if (btnCounty === selectedCounty) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      }
+
+      // Add click handlers to filter buttons
+      filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const county = button.getAttribute('data-county');
+          filterEvents(county);
+        });
+      });
+
+      // Initialize with all events visible
+      filterEvents('all');
+    })();
+  </script>
 </body>
 </html>`;
 }
@@ -295,9 +471,12 @@ async function build() {
   // Sort events by date (most recent first)
   const sortedEvents = sortEventsByDate(events);
 
+  // Extract counties for filtering
+  const countyMap = extractCounties(sortedEvents);
+
   // Generate HTML
   console.log('Generating HTML...');
-  const html = generateHTML(sortedEvents);
+  const html = generateHTML(sortedEvents, countyMap);
 
   // Write to file
   const outputPath = path.join(DIST_DIR, 'index.html');
