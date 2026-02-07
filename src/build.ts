@@ -28,6 +28,18 @@ async function fetchEvents(): Promise<Event[]> {
   }
 }
 
+function sortEventsByDate(events: Event[]): Event[] {
+  return events.sort((a, b) => {
+    const dateA = a.startDate || a.start_date || a.date || '';
+    const dateB = b.startDate || b.start_date || b.date || '';
+
+    // Sort in descending order (most recent first)
+    if (dateB < dateA) return -1;
+    if (dateB > dateA) return 1;
+    return 0;
+  });
+}
+
 function formatDate(event: Event): string {
   const startDate = event.startDate || event.start_date || event.date;
   const endDate = event.endDate || event.end_date;
@@ -280,9 +292,12 @@ async function build() {
   // Fetch events
   const events = await fetchEvents();
 
+  // Sort events by date (most recent first)
+  const sortedEvents = sortEventsByDate(events);
+
   // Generate HTML
   console.log('Generating HTML...');
-  const html = generateHTML(events);
+  const html = generateHTML(sortedEvents);
 
   // Write to file
   const outputPath = path.join(DIST_DIR, 'index.html');
