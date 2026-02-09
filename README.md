@@ -1,4 +1,4 @@
-# Railway Modelling Events Website
+# Railway Modelling Events Website foo
 
 A static website generator that displays railway modelling events from the [Railway Modelling Directory](https://github.com/johnbeynon/railwaymodellingdirectory).
 
