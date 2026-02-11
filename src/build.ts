@@ -40,6 +40,26 @@ function sortEventsByDate(events: Event[]): Event[] {
   });
 }
 
+function getOrdinalSuffix(day: number): string {
+  if (day > 3 && day < 21) return 'th';
+  switch (day % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
+function formatSingleDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const dayOfWeek = date.toLocaleDateString('en-GB', { weekday: 'long' });
+  const day = date.getDate();
+  const month = date.toLocaleDateString('en-GB', { month: 'short' });
+  const year = date.getFullYear();
+
+  return `${dayOfWeek}, ${day}${getOrdinalSuffix(day)} ${month} ${year}`;
+}
+
 function formatDate(event: Event): string {
   const startDate = event.startDate || event.start_date || event.date;
   const endDate = event.endDate || event.end_date;
@@ -47,10 +67,23 @@ function formatDate(event: Event): string {
   if (!startDate) return 'Date TBA';
 
   if (endDate && endDate !== startDate) {
-    return `${startDate} - ${endDate}`;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+    const startMonth = start.toLocaleDateString('en-GB', { month: 'short' });
+    const endMonth = end.toLocaleDateString('en-GB', { month: 'short' });
+    const year = start.getFullYear();
+
+    // Same month: "7th - 9th Feb 2026"
+    if (startMonth === endMonth) {
+      return `${startDay}${getOrdinalSuffix(startDay)} - ${endDay}${getOrdinalSuffix(endDay)} ${startMonth} ${year}`;
+    }
+    // Different months: "28th Jan - 2nd Feb 2026"
+    return `${startDay}${getOrdinalSuffix(startDay)} ${startMonth} - ${endDay}${getOrdinalSuffix(endDay)} ${endMonth} ${year}`;
   }
 
-  return startDate;
+  return formatSingleDate(startDate);
 }
 
 function extractCounties(events: Event[]): Map<string, number> {
@@ -601,6 +634,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
           return `
         <div class="this-month-event" data-county="${escapeHtml(county)}">
           <h3 class="this-month-event-name">${eventTitle}</h3>
+          ${event.layouts || event.traders ? `<div class="this-month-event-info" style="font-weight: 600; color: #764ba2;">${event.layouts ? `L:${event.layouts}` : ''}${event.layouts && event.traders ? ' ' : ''}${event.traders ? `T:${event.traders}` : ''}</div>` : ''}
           <div class="this-month-event-info">📅 ${formatDate(event)}</div>
           ${event.county ? `<div class="this-month-event-info">🏛️ ${escapeHtml(county)}</div>` : ''}
           ${event.venue ? `<div class="this-month-event-info">📍 ${escapeHtml(event.venue)}</div>` : ''}
@@ -644,6 +678,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
             return `
           <div class="month-event" data-county="${escapeHtml(county)}">
             <h4 class="month-event-name">${eventTitle}</h4>
+            ${event.layouts || event.traders ? `<div class="month-event-info" style="font-weight: 600; color: #764ba2;">${event.layouts ? `L:${event.layouts}` : ''}${event.layouts && event.traders ? ' ' : ''}${event.traders ? `T:${event.traders}` : ''}</div>` : ''}
             <div class="month-event-info">📅 ${formatDate(event)}</div>
             ${event.county ? `<div class="month-event-info">🏛️ ${escapeHtml(county)}</div>` : ''}
             ${event.venue ? `<div class="month-event-info">📍 ${escapeHtml(event.venue)}</div>` : ''}

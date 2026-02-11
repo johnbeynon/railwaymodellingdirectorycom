@@ -12,6 +12,8 @@ export interface Event {
   organiser?: string;
   organizer?: string;
   county?: string;
+  layouts?: number | string;
+  traders?: number | string;
   [key: string]: unknown;
 }
 
