@@ -192,11 +192,12 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
 
     .events-count {
       background: rgba(255, 255, 255, 0.2);
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
       padding: 8px 16px;
       border-radius: 20px;
-      margin-top: 15px;
       font-weight: 500;
+      line-height: 1;
     }
 
     footer {
@@ -334,6 +335,29 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
     .map-view-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .calendar-btn {
+      background: white;
+      color: #667eea;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: 2px solid #667eea;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+    }
+
+    .calendar-btn:hover {
+      background: #667eea;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
     .this-month-title {
@@ -502,7 +526,14 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
     <header>
       <h1>🚂 ${pageTitle}</h1>
       <p class="subtitle">Discover upcoming railway modelling events across the UK</p>
-      <div class="events-count">${events.length} ${events.length === 1 ? 'Event' : 'Events'} Listed</div>
+      <div style="display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap;">
+        <div class="events-count">${events.length} ${events.length === 1 ? 'Event' : 'Events'} Listed</div>
+        ${isCountyPage ? `
+        <a href="${slugify(selectedCounty!)}.ics" download="${selectedCounty} Events.ics" class="calendar-btn">
+          📅 Add to Calendar
+        </a>
+        ` : ''}
+      </div>
     </header>
 
     ${generateNavigation('events', pathPrefix)}
@@ -1080,6 +1111,74 @@ function escapeHtml(unsafe: string | number | undefined): string {
     .replace(/'/g, "&#039;");
 }
 
+function escapeICS(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
+}
+
+function formatICSDate(dateStr: string): string {
+  // Convert YYYY-MM-DD to YYYYMMDD for ICS format
+  return dateStr.replace(/-/g, '');
+}
+
+function generateICS(events: Event[], countyName: string): string {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+  let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Railway Modelling Events//Events Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Railway Modelling Events - ${countyName}
+X-WR-CALDESC:Railway modelling events in ${countyName}
+X-WR-TIMEZONE:Europe/London
+`;
+
+  events.forEach((event, index) => {
+    const startDateStr = event.startDate || event.start_date || event.date;
+    if (!startDateStr) return;
+
+    const endDateStr = event.endDate || event.end_date || startDateStr;
+    const startDate = formatICSDate(startDateStr);
+    const endDate = formatICSDate(endDateStr);
+
+    // For all-day events, the end date should be the day AFTER the last day
+    const endDateObj = new Date(endDateStr);
+    endDateObj.setDate(endDateObj.getDate() + 1);
+    const endDatePlusOne = formatICSDate(endDateObj.toISOString().split('T')[0]);
+
+    const organizer = event.organizer || event.organiser || '';
+    const eventTitle = organizer ? `${event.name} by ${organizer}` : event.name;
+    const venue = event.venue || '';
+    const county = event.county || '';
+    const location = venue && county ? `${venue}, ${county}` : venue || county;
+
+    const uid = `event-${index}-${startDate}@railwaymodellingevents.com`;
+
+    icsContent += `
+BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${timestamp}
+DTSTART;VALUE=DATE:${startDate}
+DTEND;VALUE=DATE:${endDatePlusOne}
+SUMMARY:${escapeICS(eventTitle)}
+${event.description ? `DESCRIPTION:${escapeICS(event.description)}` : ''}
+${location ? `LOCATION:${escapeICS(location)}` : ''}
+${event.url ? `URL:${event.url}` : ''}
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+`;
+  });
+
+  icsContent += 'END:VCALENDAR\n';
+  return icsContent;
+}
+
 async function build() {
   console.log('🚂 Building Railway Modelling Events website...\n');
 
@@ -1133,6 +1232,12 @@ async function build() {
     const countyPath = path.join(eventsDir, `${countySlug}.html`);
     fs.writeFileSync(countyPath, countyHTML);
     console.log(`✓ Generated ${countyPath}`);
+
+    // Generate ICS file for county
+    const countyICS = generateICS(countyEvents, county);
+    const icsPath = path.join(eventsDir, `${countySlug}.ics`);
+    fs.writeFileSync(icsPath, countyICS);
+    console.log(`✓ Generated ${icsPath}`);
   }
 
   // Generate Shops page
