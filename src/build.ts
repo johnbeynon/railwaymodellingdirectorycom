@@ -653,7 +653,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
           return `
         <div class="this-month-event" data-county="${escapeHtml(county)}">
           <h3 class="this-month-event-name">${eventTitle}</h3>
-          ${event.layouts || event.traders ? `<div class="event-stats">${event.layouts ? `<span class="stat-pill" title="Layouts: ${event.layouts}">L:${event.layouts}</span>` : ''}${event.traders ? `<span class="stat-pill" title="Traders: ${event.traders}">T:${event.traders}</span>` : ''}</div>` : ''}
+          ${event.layouts || event.traders ? `<div class="event-stats">${event.layouts ? `<span class="stat-pill" title="Layouts: ${event.layouts}">🚃 ${event.layouts}</span>` : ''}${event.traders ? `<span class="stat-pill" title="Traders: ${event.traders}">🏪 ${event.traders}</span>` : ''}</div>` : ''}
           <div class="this-month-event-info">📅 ${formatDate(event)}</div>
           ${event.county ? `<div class="this-month-event-info">🏛️ ${escapeHtml(county)}</div>` : ''}
           ${event.venue ? `<div class="this-month-event-info">📍 ${escapeHtml(event.venue)}</div>` : ''}
@@ -697,7 +697,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
             return `
           <div class="month-event" data-county="${escapeHtml(county)}">
             <h4 class="month-event-name">${eventTitle}</h4>
-            ${event.layouts || event.traders ? `<div class="event-stats">${event.layouts ? `<span class="stat-pill" title="Layouts: ${event.layouts}">L:${event.layouts}</span>` : ''}${event.traders ? `<span class="stat-pill" title="Traders: ${event.traders}">T:${event.traders}</span>` : ''}</div>` : ''}
+            ${event.layouts || event.traders ? `<div class="event-stats">${event.layouts ? `<span class="stat-pill" title="Layouts: ${event.layouts}">🚃 ${event.layouts}</span>` : ''}${event.traders ? `<span class="stat-pill" title="Traders: ${event.traders}">🏪 ${event.traders}</span>` : ''}</div>` : ''}
             <div class="month-event-info">📅 ${formatDate(event)}</div>
             ${event.county ? `<div class="month-event-info">🏛️ ${escapeHtml(county)}</div>` : ''}
             ${event.venue ? `<div class="month-event-info">📍 ${escapeHtml(event.venue)}</div>` : ''}
