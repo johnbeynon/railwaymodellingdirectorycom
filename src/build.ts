@@ -479,6 +479,30 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       cursor: help;
+      position: relative;
+    }
+
+    .stat-pill::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 1000;
+    }
+
+    .stat-pill:hover::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
     }
 
     .this-month-empty {
@@ -653,7 +677,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
           return `
         <div class="this-month-event" data-county="${escapeHtml(county)}">
           <h3 class="this-month-event-name">${eventTitle}</h3>
-          ${event.layouts || event.traders ? `<div class="event-stats">${event.layouts ? `<span class="stat-pill" title="Layouts: ${event.layouts}">🚃 ${event.layouts}</span>` : ''}${event.traders ? `<span class="stat-pill" title="Traders: ${event.traders}">🏪 ${event.traders}</span>` : ''}</div>` : ''}
+          ${event.layouts || event.traders ? `<div class="event-stats">${event.layouts ? `<span class="stat-pill" data-tooltip="Layouts: ${event.layouts}">🚃 ${event.layouts}</span>` : ''}${event.traders ? `<span class="stat-pill" data-tooltip="Traders: ${event.traders}">🏪 ${event.traders}</span>` : ''}</div>` : ''}
           <div class="this-month-event-info">📅 ${formatDate(event)}</div>
           ${event.county ? `<div class="this-month-event-info">🏛️ ${escapeHtml(county)}</div>` : ''}
           ${event.venue ? `<div class="this-month-event-info">📍 ${escapeHtml(event.venue)}</div>` : ''}
@@ -697,7 +721,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
             return `
           <div class="month-event" data-county="${escapeHtml(county)}">
             <h4 class="month-event-name">${eventTitle}</h4>
-            ${event.layouts || event.traders ? `<div class="event-stats">${event.layouts ? `<span class="stat-pill" title="Layouts: ${event.layouts}">🚃 ${event.layouts}</span>` : ''}${event.traders ? `<span class="stat-pill" title="Traders: ${event.traders}">🏪 ${event.traders}</span>` : ''}</div>` : ''}
+            ${event.layouts || event.traders ? `<div class="event-stats">${event.layouts ? `<span class="stat-pill" data-tooltip="Layouts: ${event.layouts}">🚃 ${event.layouts}</span>` : ''}${event.traders ? `<span class="stat-pill" data-tooltip="Traders: ${event.traders}">🏪 ${event.traders}</span>` : ''}</div>` : ''}
             <div class="month-event-info">📅 ${formatDate(event)}</div>
             ${event.county ? `<div class="month-event-info">🏛️ ${escapeHtml(county)}</div>` : ''}
             ${event.venue ? `<div class="month-event-info">📍 ${escapeHtml(event.venue)}</div>` : ''}
