@@ -28,6 +28,23 @@ async function fetchEvents(): Promise<Event[]> {
   }
 }
 
+function filterUpcomingEvents(events: Event[]): Event[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Start of today
+
+  return events.filter(event => {
+    // Use end date if available, otherwise use start date
+    const endDateStr = event.endDate || event.end_date || event.startDate || event.start_date || event.date;
+    if (!endDateStr) return false;
+
+    const eventEndDate = new Date(endDateStr);
+    eventEndDate.setHours(23, 59, 59, 999); // End of the event day
+
+    // Keep events that end today or in the future
+    return eventEndDate >= today;
+  });
+}
+
 function sortEventsByDate(events: Event[]): Event[] {
   return events.sort((a, b) => {
     const dateA = a.startDate || a.start_date || a.date || '';
@@ -1289,8 +1306,11 @@ async function build() {
   // Fetch events
   const events = await fetchEvents();
 
+  // Filter out past events
+  const upcomingEvents = filterUpcomingEvents(events);
+
   // Sort events by date (most recent first)
-  const sortedEvents = sortEventsByDate(events);
+  const sortedEvents = sortEventsByDate(upcomingEvents);
 
   // Extract counties for filtering
   const countyMap = extractCounties(sortedEvents);
