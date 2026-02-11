@@ -849,7 +849,7 @@ function generateComingSoonPage(
       <p class="subtitle">Your complete guide to railway modelling in the UK</p>
     </header>
 
-    ${generateNavigation(activePage)}
+    ${generateNavigation(activePage, '../')}
 
     <main>
       <div class="coming-soon-section">
