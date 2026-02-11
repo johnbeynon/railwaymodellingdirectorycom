@@ -76,7 +76,7 @@ function filterEventsByCurrentMonth(events: Event[]): Event[] {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth(); // 0-11
 
-  return events.filter(event => {
+  const filteredEvents = events.filter(event => {
     const startDateStr = event.startDate || event.start_date || event.date;
     if (!startDateStr) return false;
 
@@ -85,6 +85,16 @@ function filterEventsByCurrentMonth(events: Event[]): Event[] {
 
     return eventDate.getFullYear() === currentYear &&
            eventDate.getMonth() === currentMonth;
+  });
+
+  // Sort by start date ascending (earliest first)
+  return filteredEvents.sort((a, b) => {
+    const dateA = a.startDate || a.start_date || a.date || '';
+    const dateB = b.startDate || b.start_date || b.date || '';
+
+    if (dateA < dateB) return -1;
+    if (dateA > dateB) return 1;
+    return 0;
   });
 }
 
@@ -105,6 +115,17 @@ function groupEventsByMonth(events: Event[], year: number): Map<number, Event[]>
     monthMap.get(month)!.push(event);
   });
 
+  // Sort events within each month by start date ascending
+  monthMap.forEach((monthEvents) => {
+    monthEvents.sort((a, b) => {
+      const dateA = a.startDate || a.start_date || a.date || '';
+      const dateB = b.startDate || b.start_date || b.date || '';
+      if (dateA < dateB) return -1;
+      if (dateA > dateB) return 1;
+      return 0;
+    });
+  });
+
   return monthMap;
 }
 
@@ -119,13 +140,13 @@ function getMonthName(monthIndex: number): string {
 function generateNavigation(activePage: 'events' | 'shops' | 'layouts', pathPrefix: string = ''): string {
   return `
     <nav class="main-nav">
-      <a href="${pathPrefix}index.html" class="nav-link ${activePage === 'events' ? 'active' : ''}">
+      <a href="${pathPrefix}" class="nav-link ${activePage === 'events' ? 'active' : ''}">
         🚂 Events
       </a>
-      <a href="${pathPrefix}shops.html" class="nav-link ${activePage === 'shops' ? 'active' : ''}">
+      <a href="${pathPrefix}shops/" class="nav-link ${activePage === 'shops' ? 'active' : ''}">
         🏪 Shops
       </a>
-      <a href="${pathPrefix}layouts.html" class="nav-link ${activePage === 'layouts' ? 'active' : ''}">
+      <a href="${pathPrefix}layouts/" class="nav-link ${activePage === 'layouts' ? 'active' : ''}">
         🚃 Layouts
       </a>
     </nav>
@@ -144,7 +165,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
   const pageTitle = isCountyPage
     ? `Railway Modelling Events in ${selectedCounty}`
     : 'Railway Modelling Events';
-  const pathPrefix = isCountyPage ? '../' : '';
+  const pathPrefix = isCountyPage ? '../../' : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -529,7 +550,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
       <div style="display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap;">
         <div class="events-count">${events.length} ${events.length === 1 ? 'Event' : 'Events'} Listed</div>
         ${isCountyPage ? `
-        <a href="${slugify(selectedCounty!)}.ics" download="${selectedCounty} Events.ics" class="calendar-btn">
+        <a href="../${slugify(selectedCounty!)}.ics" download="${selectedCounty} Events.ics" class="calendar-btn">
           📅 Add to Calendar
         </a>
         ` : ''}
@@ -541,7 +562,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
     <div class="filter-section">
       <h3 class="filter-title">Filter by County</h3>
       <div class="filter-buttons">
-        <a href="${isCountyPage ? '../' : ''}index.html" class="filter-btn ${!isCountyPage ? 'active' : ''}" style="text-decoration: none;">
+        <a href="${isCountyPage ? '../../' : '/'}" class="filter-btn ${!isCountyPage ? 'active' : ''}" style="text-decoration: none;">
           All Counties (${Array.from(countyMap.values()).reduce((a, b) => a + b, 0)})
         </a>
         ${Array.from(countyMap.entries())
@@ -549,7 +570,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
             const isActive = selectedCounty === county;
             const slug = slugify(county);
             return `
-        <a href="${isCountyPage ? '' : 'events/'}${slug}.html" class="filter-btn ${isActive ? 'active' : ''}" style="text-decoration: none;">
+        <a href="${isCountyPage ? '../' : 'events/'}${slug}/" class="filter-btn ${isActive ? 'active' : ''}" style="text-decoration: none;">
           ${escapeHtml(county)} (${count})
         </a>
             `;
@@ -566,7 +587,7 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
       <div class="this-month-header">
         <h2 class="this-month-title">📅 This Month</h2>
         <span class="this-month-badge">${thisMonthEvents.length} ${thisMonthEvents.length === 1 ? 'Event' : 'Events'}</span>
-        <a href="${isCountyPage ? '../' : ''}map.html" class="map-view-btn" style="margin-left: auto; text-decoration: none;">
+        <a href="${isCountyPage ? '../../map/' : 'map/'}" class="map-view-btn" style="margin-left: auto; text-decoration: none;">
           🗺️ View on Map
         </a>
       </div>
@@ -988,7 +1009,7 @@ function generateMapPage(events: Event[]): string {
   <div class="container">
     <header>
       <h1>🗺️ This Month's Events - Map View</h1>
-      <a href="index.html" class="back-link">← Back to Events</a>
+      <a href="../" class="back-link">← Back to Events</a>
     </header>
     <div id="map"></div>
     <div id="loading" class="loading-overlay">Loading map...</div>
@@ -1229,11 +1250,18 @@ async function build() {
 
     const countyHTML = generateHTML(countyEvents, countyMap, countyThisMonthEvents, countyMonthlyEvents, county);
     const countySlug = slugify(county);
-    const countyPath = path.join(eventsDir, `${countySlug}.html`);
+
+    // Create county directory
+    const countyDir = path.join(eventsDir, countySlug);
+    if (!fs.existsSync(countyDir)) {
+      fs.mkdirSync(countyDir, { recursive: true });
+    }
+
+    const countyPath = path.join(countyDir, 'index.html');
     fs.writeFileSync(countyPath, countyHTML);
     console.log(`✓ Generated ${countyPath}`);
 
-    // Generate ICS file for county
+    // Generate ICS file for county (in events directory, not county subdirectory)
     const countyICS = generateICS(countyEvents, county);
     const icsPath = path.join(eventsDir, `${countySlug}.ics`);
     fs.writeFileSync(icsPath, countyICS);
@@ -1247,7 +1275,11 @@ async function build() {
     'We\'re building a comprehensive directory of railway modelling shops across the UK. Check back soon to discover retailers near you!',
     'shops'
   );
-  const shopsPath = path.join(DIST_DIR, 'shops.html');
+  const shopsDir = path.join(DIST_DIR, 'shops');
+  if (!fs.existsSync(shopsDir)) {
+    fs.mkdirSync(shopsDir, { recursive: true });
+  }
+  const shopsPath = path.join(shopsDir, 'index.html');
   fs.writeFileSync(shopsPath, shopsHTML);
   console.log(`✓ Generated ${shopsPath}`);
 
@@ -1258,13 +1290,21 @@ async function build() {
     'We\'re creating a showcase of amazing railway modelling layouts from across the UK. Stay tuned for inspiration and ideas!',
     'layouts'
   );
-  const layoutsPath = path.join(DIST_DIR, 'layouts.html');
+  const layoutsDir = path.join(DIST_DIR, 'layouts');
+  if (!fs.existsSync(layoutsDir)) {
+    fs.mkdirSync(layoutsDir, { recursive: true });
+  }
+  const layoutsPath = path.join(layoutsDir, 'index.html');
   fs.writeFileSync(layoutsPath, layoutsHTML);
   console.log(`✓ Generated ${layoutsPath}`);
 
   // Generate Map page for this month's events
   const mapHTML = generateMapPage(thisMonthEvents);
-  const mapPath = path.join(DIST_DIR, 'map.html');
+  const mapDir = path.join(DIST_DIR, 'map');
+  if (!fs.existsSync(mapDir)) {
+    fs.mkdirSync(mapDir, { recursive: true });
+  }
+  const mapPath = path.join(mapDir, 'index.html');
   fs.writeFileSync(mapPath, mapHTML);
   console.log(`✓ Generated ${mapPath}`);
 
