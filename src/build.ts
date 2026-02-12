@@ -522,6 +522,73 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
       transform: translateX(-50%) translateY(-4px);
     }
 
+    /* Add to Calendar Dropdown Styles */
+    .add-to-calendar {
+      position: relative;
+      display: inline-block;
+    }
+
+    .add-to-calendar-btn {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .add-to-calendar-btn:hover {
+      text-decoration: underline;
+    }
+
+    .calendar-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 5px;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 100;
+      min-width: 180px;
+    }
+
+    .calendar-dropdown.active {
+      display: block;
+    }
+
+    .calendar-dropdown-item {
+      display: block;
+      padding: 10px 15px;
+      color: #333;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .calendar-dropdown-item:first-child {
+      border-radius: 6px 6px 0 0;
+    }
+
+    .calendar-dropdown-item:last-child {
+      border-bottom: none;
+      border-radius: 0 0 6px 6px;
+    }
+
+    .calendar-dropdown-item:hover {
+      background: #f5f5f5;
+      color: #667eea;
+    }
+
     .this-month-empty {
       text-align: center;
       padding: 30px;
@@ -694,6 +761,11 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
           const eventTitle = organizer
             ? `${escapeHtml(event.name)} by ${escapeHtml(organizer)}`
             : escapeHtml(event.name);
+          const eventSlug = slugify(event.name);
+          const startDate = event.startDate || event.start_date || event.date;
+          const icsPath = `${pathPrefix}ics/${eventSlug}-${startDate}.ics`;
+          const googleUrl = generateGoogleCalendarUrl(event);
+          const outlookUrl = generateOutlookUrl(event);
           return `
         <div class="this-month-event" data-county="${escapeHtml(county)}">
           <h3 class="this-month-event-name">${eventTitle}</h3>
@@ -701,13 +773,24 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
           <div class="this-month-event-info">📅 ${formatDate(event)}</div>
           ${event.county ? `<div class="this-month-event-info">🏛️ ${escapeHtml(county)}</div>` : ''}
           ${event.venue ? `<div class="this-month-event-info">📍 ${escapeHtml(event.venue)}</div>` : ''}
-          ${event.url ? `
-          <div style="margin-top: 12px;">
-            <a href="${escapeHtml(event.url)}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none; font-weight: 600;">
+          <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div class="add-to-calendar">
+              <button class="add-to-calendar-btn" onclick="toggleCalendarDropdown(event, this)">
+                📥 Add to Calendar <span style="font-size: 0.7rem;">▼</span>
+              </button>
+              <div class="calendar-dropdown">
+                <a href="${googleUrl}" target="_blank" rel="noopener noreferrer" class="calendar-dropdown-item">📅 Google Calendar</a>
+                <a href="${outlookUrl}" target="_blank" rel="noopener noreferrer" class="calendar-dropdown-item">📧 Outlook</a>
+                <a href="${icsPath}" download="${escapeHtml(event.name)}.ics" class="calendar-dropdown-item">🍎 Apple Calendar</a>
+                <a href="${icsPath}" download="${escapeHtml(event.name)}.ics" class="calendar-dropdown-item">💾 Download ICS</a>
+              </div>
+            </div>
+            ${event.url ? `
+            <a href="${escapeHtml(event.url)}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none; font-weight: 600; margin-left: auto;">
               More Info →
             </a>
+            ` : ''}
           </div>
-          ` : ''}
         </div>
           `;
         }).join('')}
@@ -738,6 +821,11 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
             const eventTitle = organizer
               ? `${escapeHtml(event.name)} by ${escapeHtml(organizer)}`
               : escapeHtml(event.name);
+            const eventSlug = slugify(event.name);
+            const startDate = event.startDate || event.start_date || event.date;
+            const icsPath = `${pathPrefix}ics/${eventSlug}-${startDate}.ics`;
+            const googleUrl = generateGoogleCalendarUrl(event);
+            const outlookUrl = generateOutlookUrl(event);
             return `
           <div class="month-event" data-county="${escapeHtml(county)}">
             <h4 class="month-event-name">${eventTitle}</h4>
@@ -745,13 +833,24 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
             <div class="month-event-info">📅 ${formatDate(event)}</div>
             ${event.county ? `<div class="month-event-info">🏛️ ${escapeHtml(county)}</div>` : ''}
             ${event.venue ? `<div class="month-event-info">📍 ${escapeHtml(event.venue)}</div>` : ''}
-            ${event.url ? `
-            <div style="margin-top: 10px;">
-              <a href="${escapeHtml(event.url)}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none; font-weight: 600; font-size: 0.85rem;">
+            <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <div class="add-to-calendar">
+                <button class="add-to-calendar-btn" onclick="toggleCalendarDropdown(event, this)">
+                  📥 Add to Calendar <span style="font-size: 0.7rem;">▼</span>
+                </button>
+                <div class="calendar-dropdown">
+                  <a href="${googleUrl}" target="_blank" rel="noopener noreferrer" class="calendar-dropdown-item">📅 Google Calendar</a>
+                  <a href="${outlookUrl}" target="_blank" rel="noopener noreferrer" class="calendar-dropdown-item">📧 Outlook</a>
+                  <a href="${icsPath}" download="${escapeHtml(event.name)}.ics" class="calendar-dropdown-item">🍎 Apple Calendar</a>
+                  <a href="${icsPath}" download="${escapeHtml(event.name)}.ics" class="calendar-dropdown-item">💾 Download ICS</a>
+                </div>
+              </div>
+              ${event.url ? `
+              <a href="${escapeHtml(event.url)}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none; font-weight: 600; font-size: 0.85rem; margin-left: auto;">
                 More Info →
               </a>
+              ` : ''}
             </div>
-            ` : ''}
           </div>
             `;
           }).join('')}
@@ -781,6 +880,28 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
     </footer>
   </div>
 
+  <script>
+    function toggleCalendarDropdown(event, button) {
+      event.stopPropagation();
+      const dropdown = button.nextElementSibling;
+      const isActive = dropdown.classList.contains('active');
+
+      // Close all dropdowns
+      document.querySelectorAll('.calendar-dropdown').forEach(d => d.classList.remove('active'));
+
+      // Toggle current dropdown
+      if (!isActive) {
+        dropdown.classList.add('active');
+      }
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.add-to-calendar')) {
+        document.querySelectorAll('.calendar-dropdown').forEach(d => d.classList.remove('active'));
+      }
+    });
+  </script>
 </body>
 </html>`;
 }
@@ -1259,15 +1380,24 @@ function generateCalendarPage(events: Event[]): string {
 
   const eventsJSON = JSON.stringify(Array.from(eventsByDate.entries()).map(([date, events]) => ({
     date,
-    events: events.map(event => ({
-      name: event.name,
-      organizer: event.organizer || event.organiser || '',
-      venue: event.venue || '',
-      county: event.county || '',
-      url: event.url || '',
-      layouts: event.layouts || 0,
-      traders: event.traders || 0
-    }))
+    events: events.map(event => {
+      const eventSlug = slugify(event.name);
+      const startDate = event.startDate || event.start_date || event.date;
+      const googleUrl = generateGoogleCalendarUrl(event);
+      const outlookUrl = generateOutlookUrl(event);
+      return {
+        name: event.name,
+        organizer: event.organizer || event.organiser || '',
+        venue: event.venue || '',
+        county: event.county || '',
+        url: event.url || '',
+        layouts: event.layouts || 0,
+        traders: event.traders || 0,
+        icsPath: `../ics/${eventSlug}-${startDate}.ics`,
+        googleUrl,
+        outlookUrl
+      };
+    })
   })));
 
   return `<!DOCTYPE html>
@@ -1534,6 +1664,73 @@ function generateCalendarPage(events: Event[]): string {
       color: white;
     }
 
+    /* Add to Calendar Dropdown Styles */
+    .add-to-calendar {
+      position: relative;
+      display: inline-block;
+    }
+
+    .add-to-calendar-btn {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .add-to-calendar-btn:hover {
+      text-decoration: underline;
+    }
+
+    .calendar-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 5px;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 100;
+      min-width: 180px;
+    }
+
+    .calendar-dropdown-menu.active {
+      display: block;
+    }
+
+    .calendar-dropdown-item {
+      display: block;
+      padding: 10px 15px;
+      color: #333;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .calendar-dropdown-item:first-child {
+      border-radius: 6px 6px 0 0;
+    }
+
+    .calendar-dropdown-item:last-child {
+      border-bottom: none;
+      border-radius: 0 0 6px 6px;
+    }
+
+    .calendar-dropdown-item:hover {
+      background: #f5f5f5;
+      color: #667eea;
+    }
+
     @media (max-width: 1024px) {
       .calendar-grid {
         gap: 5px;
@@ -1722,7 +1919,20 @@ function generateCalendarPage(events: Event[]): string {
             \` : ''}
             \${event.county ? \`<div class="modal-event-info">🏛️ \${event.county}</div>\` : ''}
             \${event.venue ? \`<div class="modal-event-info">📍 \${event.venue}</div>\` : ''}
-            \${event.url ? \`<a href="\${event.url}" target="_blank" rel="noopener noreferrer" class="modal-event-link">More Info →</a>\` : ''}
+            <div style="margin-top: 10px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+              <div class="add-to-calendar">
+                <button class="add-to-calendar-btn" onclick="toggleCalendarDropdown(event, this)">
+                  📥 Add to Calendar <span style="font-size: 0.7rem;">▼</span>
+                </button>
+                <div class="calendar-dropdown-menu">
+                  <a href="\${event.googleUrl}" target="_blank" rel="noopener noreferrer" class="calendar-dropdown-item">📅 Google Calendar</a>
+                  <a href="\${event.outlookUrl}" target="_blank" rel="noopener noreferrer" class="calendar-dropdown-item">📧 Outlook</a>
+                  <a href="\${event.icsPath}" download="\${event.name}.ics" class="calendar-dropdown-item">🍎 Apple Calendar</a>
+                  <a href="\${event.icsPath}" download="\${event.name}.ics" class="calendar-dropdown-item">💾 Download ICS</a>
+                </div>
+              </div>
+              \${event.url ? \`<a href="\${event.url}" target="_blank" rel="noopener noreferrer" class="modal-event-link">More Info →</a>\` : ''}
+            </div>
           </div>
         \`;
       });
@@ -1740,6 +1950,27 @@ function generateCalendarPage(events: Event[]): string {
     document.getElementById('modal').addEventListener('click', function(e) {
       if (e.target === this) {
         closeModal();
+      }
+    });
+
+    function toggleCalendarDropdown(event, button) {
+      event.stopPropagation();
+      const dropdown = button.nextElementSibling;
+      const isActive = dropdown.classList.contains('active');
+
+      // Close all dropdowns
+      document.querySelectorAll('.calendar-dropdown-menu').forEach(d => d.classList.remove('active'));
+
+      // Toggle current dropdown
+      if (!isActive) {
+        dropdown.classList.add('active');
+      }
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.add-to-calendar')) {
+        document.querySelectorAll('.calendar-dropdown-menu').forEach(d => d.classList.remove('active'));
       }
     });
 
@@ -1772,6 +2003,70 @@ function escapeICS(text: string): string {
 function formatICSDate(dateStr: string): string {
   // Convert YYYY-MM-DD to YYYYMMDD for ICS format
   return dateStr.replace(/-/g, '');
+}
+
+function generateGoogleCalendarUrl(event: Event): string {
+  const startDateStr = event.startDate || event.start_date || event.date;
+  if (!startDateStr) return '';
+
+  const endDateStr = event.endDate || event.end_date || startDateStr;
+  const startDate = formatICSDate(startDateStr);
+
+  // For all-day events, end date should be the day after
+  const endDateObj = new Date(endDateStr);
+  endDateObj.setDate(endDateObj.getDate() + 1);
+  const endDate = formatICSDate(endDateObj.toISOString().split('T')[0]);
+
+  const organizer = event.organizer || event.organiser || '';
+  const eventTitle = organizer ? `${event.name} by ${organizer}` : event.name;
+  const venue = event.venue || '';
+  const county = event.county || '';
+  const location = venue && county ? `${venue}, ${county}` : venue || county;
+
+  const details = event.url ? `More info: ${event.url}` : '';
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: eventTitle,
+    dates: `${startDate}/${endDate}`,
+    ...(details && { details }),
+    ...(location && { location })
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function generateOutlookUrl(event: Event): string {
+  const startDateStr = event.startDate || event.start_date || event.date;
+  if (!startDateStr) return '';
+
+  const endDateStr = event.endDate || event.end_date || startDateStr;
+
+  // Outlook expects ISO format with time
+  const startDate = new Date(startDateStr + 'T00:00:00').toISOString();
+  const endDateObj = new Date(endDateStr);
+  endDateObj.setDate(endDateObj.getDate() + 1);
+  const endDate = endDateObj.toISOString();
+
+  const organizer = event.organizer || event.organiser || '';
+  const eventTitle = organizer ? `${event.name} by ${organizer}` : event.name;
+  const venue = event.venue || '';
+  const county = event.county || '';
+  const location = venue && county ? `${venue}, ${county}` : venue || county;
+
+  const body = event.url ? `More info: ${event.url}` : '';
+
+  const params = new URLSearchParams({
+    subject: eventTitle,
+    startdt: startDate,
+    enddt: endDate,
+    ...(body && { body }),
+    ...(location && { location }),
+    path: '/calendar/action/compose',
+    rru: 'addevent'
+  });
+
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
 }
 
 function generateICS(events: Event[], countyName: string): string {
@@ -1829,6 +2124,52 @@ END:VEVENT
   return icsContent;
 }
 
+function generateSingleEventICS(event: Event): string {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+  const startDateStr = event.startDate || event.start_date || event.date;
+  if (!startDateStr) return '';
+
+  const endDateStr = event.endDate || event.end_date || startDateStr;
+  const startDate = formatICSDate(startDateStr);
+
+  // For all-day events, the end date should be the day AFTER the last day
+  const endDateObj = new Date(endDateStr);
+  endDateObj.setDate(endDateObj.getDate() + 1);
+  const endDatePlusOne = formatICSDate(endDateObj.toISOString().split('T')[0]);
+
+  const organizer = event.organizer || event.organiser || '';
+  const eventTitle = organizer ? `${event.name} by ${organizer}` : event.name;
+  const venue = event.venue || '';
+  const county = event.county || '';
+  const location = venue && county ? `${venue}, ${county}` : venue || county;
+
+  const uid = `event-${slugify(event.name)}-${startDate}@railwaymodellingevents.com`;
+
+  return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Railway Modelling Events//Events Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:${escapeICS(eventTitle)}
+X-WR-TIMEZONE:Europe/London
+BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${timestamp}
+DTSTART;VALUE=DATE:${startDate}
+DTEND;VALUE=DATE:${endDatePlusOne}
+SUMMARY:${escapeICS(eventTitle)}
+${event.description ? `DESCRIPTION:${escapeICS(event.description)}` : ''}
+${location ? `LOCATION:${escapeICS(location)}` : ''}
+${event.url ? `URL:${event.url}` : ''}
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR
+`;
+}
+
 async function build() {
   console.log('🚂 Building Railway Modelling Events website...\n');
 
@@ -1854,6 +2195,25 @@ async function build() {
 
   // Group events by month for 2026
   const monthlyEvents = groupEventsByMonth(sortedEvents, 2026);
+
+  // Generate individual ICS files for each event
+  console.log('Generating individual event calendar files...');
+  const icsDir = path.join(DIST_DIR, 'ics');
+  if (!fs.existsSync(icsDir)) {
+    fs.mkdirSync(icsDir, { recursive: true });
+  }
+
+  sortedEvents.forEach((event) => {
+    const icsContent = generateSingleEventICS(event);
+    if (icsContent) {
+      const eventSlug = slugify(event.name);
+      const startDate = event.startDate || event.start_date || event.date;
+      const icsFileName = `${eventSlug}-${startDate}.ics`;
+      const icsPath = path.join(icsDir, icsFileName);
+      fs.writeFileSync(icsPath, icsContent);
+    }
+  });
+  console.log(`✓ Generated ${sortedEvents.length} individual event ICS files`);
 
   // Generate Events page (index.html)
   console.log('Generating HTML pages...');
