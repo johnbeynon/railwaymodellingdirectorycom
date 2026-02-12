@@ -1112,7 +1112,8 @@ function generateMapPage(events: Event[]): string {
     venue: event.venue || '',
     location: event.location || '',
     county: event.county || '',
-    url: event.url || ''
+    url: event.url || '',
+    latLng: (event as any).latLng || null
   })));
 
   return `<!DOCTYPE html>
@@ -1296,39 +1297,74 @@ function generateMapPage(events: Event[]): string {
     // Geocode and add markers for each event
     async function addEventMarkers() {
       for (const event of events) {
-        // Build query string - try venue first, then location, then county
-        let query = '';
-        if (event.venue && event.county) {
-          query = \`\${event.venue}, \${event.county}, UK\`;
-        } else if (event.location && event.county) {
-          query = \`\${event.location}, \${event.county}, UK\`;
-        } else if (event.venue) {
-          query = \`\${event.venue}, UK\`;
-        } else if (event.location) {
-          query = \`\${event.location}, UK\`;
-        } else if (event.county) {
-          query = \`\${event.county}, UK\`;
+        let lat, lon;
+
+        // Check if event already has coordinates
+        if (event.latLng) {
+          // Handle string format "lat, lng"
+          if (typeof event.latLng === 'string') {
+            const parts = event.latLng.split(',').map(s => s.trim());
+            if (parts.length === 2) {
+              lat = parseFloat(parts[0]);
+              lon = parseFloat(parts[1]);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                console.log(\`Using existing coordinates for: \${event.name}\`);
+              } else {
+                lat = null;
+                lon = null;
+              }
+            }
+          }
+          // Handle object format {lat: ..., lng: ...}
+          else if (event.latLng.lat && event.latLng.lng) {
+            lat = event.latLng.lat;
+            lon = event.latLng.lng;
+            console.log(\`Using existing coordinates for: \${event.name}\`);
+          }
         }
 
-        if (!query) {
-          console.warn('No location data for event:', event.name);
-          continue;
+        // Fall back to geocoding if no valid coordinates
+        if (!lat || !lon) {
+          // Fall back to geocoding
+          let query = '';
+          if (event.venue && event.county) {
+            query = \`\${event.venue}, \${event.county}, UK\`;
+          } else if (event.location && event.county) {
+            query = \`\${event.location}, \${event.county}, UK\`;
+          } else if (event.venue) {
+            query = \`\${event.venue}, UK\`;
+          } else if (event.location) {
+            query = \`\${event.location}, UK\`;
+          } else if (event.county) {
+            query = \`\${event.county}, UK\`;
+          }
+
+          if (!query) {
+            console.warn('No location data for event:', event.name);
+            continue;
+          }
+
+          // Add delay to respect Nominatim usage policy (max 1 request per second)
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          const result = await geocodeAddress(query);
+
+          if (!result) {
+            console.warn(\`Could not geocode: \${event.name}\`);
+            continue;
+          }
+
+          lat = parseFloat(result.lat);
+          lon = parseFloat(result.lon);
         }
 
-        // Add delay to respect Nominatim usage policy (max 1 request per second)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const result = await geocodeAddress(query);
-
-        if (result) {
-          const marker = L.marker([parseFloat(result.lat), parseFloat(result.lon)])
+        if (lat && lon) {
+          const marker = L.marker([lat, lon])
             .addTo(map)
             .bindPopup(createPopupContent(event));
 
           geocodedCount++;
           loadingEl.textContent = \`Loading map... (\${geocodedCount}/\${events.length})\`;
-        } else {
-          console.warn('Could not geocode:', query, 'for event:', event.name);
         }
       }
 
