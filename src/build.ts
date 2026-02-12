@@ -873,6 +873,10 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
         })}
       </p>
       <p style="margin-top: 8px; font-size: 0.85rem;">
+        <a href="https://github.com/railwaymodellingdirectory/railwaymodellingdirectorycom/wiki/Why-another-railway-modelling-directory%3F" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">
+          About
+        </a>
+        <span style="color: #999; margin: 0 8px;">|</span>
         <a href="https://github.com/railwaymodellingdirectory" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">
           View on GitHub
         </a>
@@ -1094,6 +1098,10 @@ function generateComingSoonPage(
         })}
       </p>
       <p style="margin-top: 8px; font-size: 0.85rem;">
+        <a href="https://github.com/railwaymodellingdirectory/railwaymodellingdirectorycom/wiki/Why-another-railway-modelling-directory%3F" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">
+          About
+        </a>
+        <span style="color: #999; margin: 0 8px;">|</span>
         <a href="https://github.com/railwaymodellingdirectory" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">
           View on GitHub
         </a>
