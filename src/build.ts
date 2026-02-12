@@ -680,7 +680,10 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
       <div class="this-month-header">
         <h2 class="this-month-title">📅 This Month</h2>
         <span class="this-month-badge">${thisMonthEvents.length} ${thisMonthEvents.length === 1 ? 'Event' : 'Events'}</span>
-        <a href="${isCountyPage ? '../../map/' : 'map/'}" class="map-view-btn" style="margin-left: auto; text-decoration: none;">
+        <a href="${isCountyPage ? '../../calendar/' : 'calendar/'}" class="calendar-btn" style="margin-left: auto; text-decoration: none;">
+          📅 View Calendar
+        </a>
+        <a href="${isCountyPage ? '../../map/' : 'map/'}" class="map-view-btn" style="text-decoration: none;">
           🗺️ View on Map
         </a>
       </div>
@@ -769,6 +772,11 @@ function generateHTML(events: Event[], countyMap: Map<string, number>, thisMonth
           month: 'long',
           year: 'numeric'
         })}
+      </p>
+      <p style="margin-top: 8px; font-size: 0.85rem;">
+        <a href="https://github.com/railwaymodellingdirectory" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">
+          View on GitHub
+        </a>
       </p>
     </footer>
   </div>
@@ -963,6 +971,11 @@ function generateComingSoonPage(
           month: 'long',
           year: 'numeric'
         })}
+      </p>
+      <p style="margin-top: 8px; font-size: 0.85rem;">
+        <a href="https://github.com/railwaymodellingdirectory" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">
+          View on GitHub
+        </a>
       </p>
     </footer>
   </div>
@@ -1216,6 +1229,527 @@ function generateMapPage(events: Event[]): string {
 </html>`;
 }
 
+function generateCalendarPage(events: Event[]): string {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const monthName = getMonthName(currentMonth);
+
+  // Group events by date
+  const eventsByDate = new Map<string, Event[]>();
+  events.forEach(event => {
+    const startDateStr = event.startDate || event.start_date || event.date;
+    if (!startDateStr) return;
+
+    const endDateStr = event.endDate || event.end_date || startDateStr;
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    // Add event to each date it spans
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateKey = currentDate.toISOString().split('T')[0];
+      if (!eventsByDate.has(dateKey)) {
+        eventsByDate.set(dateKey, []);
+      }
+      eventsByDate.get(dateKey)!.push(event);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  });
+
+  const eventsJSON = JSON.stringify(Array.from(eventsByDate.entries()).map(([date, events]) => ({
+    date,
+    events: events.map(event => ({
+      name: event.name,
+      organizer: event.organizer || event.organiser || '',
+      venue: event.venue || '',
+      county: event.county || '',
+      url: event.url || '',
+      layouts: event.layouts || 0,
+      traders: event.traders || 0
+    }))
+  })));
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>This Month's Events - Calendar View</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin: 0;
+    }
+
+    .back-link {
+      color: white;
+      text-decoration: none;
+      padding: 8px 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .back-link:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .calendar {
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .calendar-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .calendar-title {
+      font-size: 2rem;
+      color: #667eea;
+      font-weight: 700;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+    }
+
+    .calendar-day-header {
+      text-align: center;
+      font-weight: 700;
+      color: #667eea;
+      padding: 15px 10px;
+      font-size: 0.9rem;
+    }
+
+    .calendar-day {
+      min-height: 120px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px;
+      background: #fafafa;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .calendar-day.empty {
+      background: #f5f5f5;
+      border-color: #f0f0f0;
+    }
+
+    .calendar-day.today {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+    }
+
+    .calendar-day.has-events {
+      background: white;
+      border-color: #667eea;
+    }
+
+    .calendar-day.has-events:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+
+    .day-number {
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+    }
+
+    .calendar-day.today .day-number {
+      color: #667eea;
+    }
+
+    .event-dot {
+      width: 100%;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .event-dot:hover {
+      transform: scale(1.02);
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+    }
+
+    .event-count {
+      font-size: 0.7rem;
+      color: #667eea;
+      font-weight: 600;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 2rem;
+      color: #999;
+      cursor: pointer;
+      border: none;
+      background: none;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: #667eea;
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      color: #667eea;
+      margin-bottom: 20px;
+      padding-right: 30px;
+    }
+
+    .modal-event {
+      padding: 15px;
+      margin-bottom: 15px;
+      border-left: 4px solid #667eea;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+
+    .modal-event-name {
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+    }
+
+    .modal-event-info {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .modal-event-link {
+      display: inline-block;
+      margin-top: 8px;
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .modal-event-link:hover {
+      text-decoration: underline;
+    }
+
+    .event-stats {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    @media (max-width: 1024px) {
+      .calendar-grid {
+        gap: 5px;
+      }
+
+      .calendar-day {
+        min-height: 100px;
+        padding: 8px;
+      }
+
+      .event-dot {
+        font-size: 0.7rem;
+        padding: 4px 6px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.4rem;
+      }
+
+      .calendar {
+        padding: 15px;
+      }
+
+      .calendar-title {
+        font-size: 1.5rem;
+      }
+
+      .calendar-day-header {
+        padding: 10px 5px;
+        font-size: 0.8rem;
+      }
+
+      .calendar-day {
+        min-height: 80px;
+        padding: 5px;
+      }
+
+      .day-number {
+        font-size: 0.9rem;
+      }
+
+      .event-dot {
+        font-size: 0.65rem;
+        padding: 3px 5px;
+      }
+
+      .modal-content {
+        margin: 20px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📅 ${monthName} ${currentYear} - Calendar View</h1>
+      <a href="../" class="back-link">← Back to Events</a>
+    </header>
+
+    <div class="calendar">
+      <div class="calendar-header">
+        <h2 class="calendar-title">${monthName} ${currentYear}</h2>
+      </div>
+      <div class="calendar-grid" id="calendar">
+        <!-- Calendar will be generated here -->
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    const eventsData = ${eventsJSON};
+    const eventsByDate = new Map(eventsData.map(item => [item.date, item.events]));
+
+    function generateCalendar() {
+      const now = new Date();
+      const year = ${currentYear};
+      const month = ${currentMonth};
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startingDayOfWeek = firstDay.getDay();
+
+      const calendar = document.getElementById('calendar');
+
+      // Add day headers
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      dayNames.forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-day-header';
+        header.textContent = day;
+        calendar.appendChild(header);
+      });
+
+      // Add empty cells for days before the first day of the month
+      for (let i = 0; i < startingDayOfWeek; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day empty';
+        calendar.appendChild(emptyDay);
+      }
+
+      // Add days of the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = \`\${year}-\${String(month + 1).padStart(2, '0')}-\${String(day).padStart(2, '0')}\`;
+        const events = eventsByDate.get(dateStr) || [];
+
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+
+        // Check if today
+        const today = new Date();
+        if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+          dayCell.classList.add('today');
+        }
+
+        if (events.length > 0) {
+          dayCell.classList.add('has-events');
+        }
+
+        const dayNumber = document.createElement('div');
+        dayNumber.className = 'day-number';
+        dayNumber.textContent = day;
+        dayCell.appendChild(dayNumber);
+
+        // Add event dots (max 3 visible)
+        const maxVisible = 3;
+        events.slice(0, maxVisible).forEach(event => {
+          const eventDot = document.createElement('div');
+          eventDot.className = 'event-dot';
+          eventDot.textContent = event.name;
+          eventDot.onclick = () => showEventModal(dateStr, events);
+          dayCell.appendChild(eventDot);
+        });
+
+        // Show count if more events
+        if (events.length > maxVisible) {
+          const moreCount = document.createElement('div');
+          moreCount.className = 'event-count';
+          moreCount.textContent = \`+\${events.length - maxVisible} more\`;
+          moreCount.onclick = () => showEventModal(dateStr, events);
+          moreCount.style.cursor = 'pointer';
+          dayCell.appendChild(moreCount);
+        }
+
+        calendar.appendChild(dayCell);
+      }
+    }
+
+    function showEventModal(dateStr, events) {
+      const modal = document.getElementById('modal');
+      const modalBody = document.getElementById('modal-body');
+
+      const date = new Date(dateStr + 'T12:00:00');
+      const formattedDate = date.toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+
+      let html = \`<h2 class="modal-title">Events on \${formattedDate}</h2>\`;
+
+      events.forEach(event => {
+        const eventTitle = event.organizer
+          ? \`\${event.name} by \${event.organizer}\`
+          : event.name;
+
+        html += \`
+          <div class="modal-event">
+            <div class="modal-event-name">\${eventTitle}</div>
+            \${event.layouts || event.traders ? \`
+              <div class="event-stats">
+                \${event.layouts ? \`<span class="stat-pill">🚃 \${event.layouts} layouts</span>\` : ''}
+                \${event.traders ? \`<span class="stat-pill">🏪 \${event.traders} traders</span>\` : ''}
+              </div>
+            \` : ''}
+            \${event.county ? \`<div class="modal-event-info">🏛️ \${event.county}</div>\` : ''}
+            \${event.venue ? \`<div class="modal-event-info">📍 \${event.venue}</div>\` : ''}
+            \${event.url ? \`<a href="\${event.url}" target="_blank" rel="noopener noreferrer" class="modal-event-link">More Info →</a>\` : ''}
+          </div>
+        \`;
+      });
+
+      modalBody.innerHTML = html;
+      modal.classList.add('active');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      modal.classList.remove('active');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+
+    // Generate calendar on load
+    generateCalendar();
+  </script>
+</body>
+</html>`;
+}
+
 function escapeHtml(unsafe: string | number | undefined): string {
   if (unsafe === undefined || unsafe === null) return '';
   const str = String(unsafe);
@@ -1405,6 +1939,16 @@ async function build() {
   const mapPath = path.join(mapDir, 'index.html');
   fs.writeFileSync(mapPath, mapHTML);
   console.log(`✓ Generated ${mapPath}`);
+
+  // Generate Calendar page for this month's events
+  const calendarHTML = generateCalendarPage(thisMonthEvents);
+  const calendarDir = path.join(DIST_DIR, 'calendar');
+  if (!fs.existsSync(calendarDir)) {
+    fs.mkdirSync(calendarDir, { recursive: true });
+  }
+  const calendarPath = path.join(calendarDir, 'index.html');
+  fs.writeFileSync(calendarPath, calendarHTML);
+  console.log(`✓ Generated ${calendarPath}`);
 
   console.log('\n✨ Build complete!');
   console.log(`\nTo view the site:`);
