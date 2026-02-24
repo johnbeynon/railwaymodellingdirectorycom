@@ -2168,6 +2168,61 @@ END:VEVENT
   return icsContent;
 }
 
+function generateAllEventsICS(events: Event[]): string {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+  let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Railway Modelling Events//All Events Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Railway Modelling Events
+X-WR-CALDESC:All upcoming railway modelling events in the UK
+X-WR-TIMEZONE:Europe/London
+REFRESH-INTERVAL;VALUE=DURATION:P1D
+X-PUBLISHED-TTL:P1D
+`;
+
+  events.forEach((event) => {
+    const startDateStr = event.startDate || event.start_date || event.date;
+    if (!startDateStr) return;
+
+    const endDateStr = event.endDate || event.end_date || startDateStr;
+    const startDate = formatICSDate(startDateStr);
+
+    const endDateObj = new Date(endDateStr);
+    endDateObj.setDate(endDateObj.getDate() + 1);
+    const endDatePlusOne = formatICSDate(endDateObj.toISOString().split('T')[0]);
+
+    const organizer = event.organizer || event.organiser || '';
+    const eventTitle = organizer ? `${event.name} by ${organizer}` : event.name;
+    const venue = event.venue || '';
+    const county = event.county || '';
+    const location = venue && county ? `${venue}, ${county}` : venue || county;
+
+    // Stable UID so calendar apps update events rather than duplicate them
+    const uid = `${slugify(event.name)}-${startDate}@railwaymodellingevents.com`;
+
+    icsContent += `BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${timestamp}
+DTSTART;VALUE=DATE:${startDate}
+DTEND;VALUE=DATE:${endDatePlusOne}
+SUMMARY:${escapeICS(eventTitle)}
+${event.description ? `DESCRIPTION:${escapeICS(event.description)}` : ''}
+${location ? `LOCATION:${escapeICS(location)}` : ''}
+${event.url ? `URL:${event.url}` : ''}
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+`;
+  });
+
+  icsContent += 'END:VCALENDAR\n';
+  return icsContent;
+}
+
 function generateSingleEventICS(event: Event): string {
   const now = new Date();
   const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -2258,6 +2313,15 @@ async function build() {
     }
   });
   console.log(`✓ Generated ${sortedEvents.length} individual event ICS files`);
+
+  // Generate all-events subscription feed
+  const allEventsICS = generateAllEventsICS(sortedEvents);
+  const eventsICSDir = path.join(DIST_DIR, 'events');
+  if (!fs.existsSync(eventsICSDir)) {
+    fs.mkdirSync(eventsICSDir, { recursive: true });
+  }
+  fs.writeFileSync(path.join(eventsICSDir, 'calendar.ics'), allEventsICS);
+  console.log('✓ Generated /events/calendar.ics subscription feed');;
 
   // Generate Events page (index.html)
   console.log('Generating HTML pages...');
