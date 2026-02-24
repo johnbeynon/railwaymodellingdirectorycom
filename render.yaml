@@ -9,7 +9,11 @@ services:
       - path: /*
         name: Cache-Control
         value: public, max-age=3600
+      - path: /events/*.ics
+        name: Content-Type
+        value: text/calendar; charset=utf-8
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+
